@@ -1,0 +1,32 @@
+body {
+  margin: 0px;
+}
+textarea {
+  width: 100%;
+  height: 100px;
+}
+#output svg {
+  width: 100%;
+}
+.playback-gui {
+  display: flex;
+  background: #AAAAFF;
+  padding: 10px;
+}
+.playback-gui button {
+  background: #EEEEFF;
+  border: #CCCCFF;
+  padding: 10px;
+  margin: 3px;
+  cursor: pointer;
+}
+.playback-gui .bpm-box {
+  background: #EEEEFF;
+  border: #CCCCFF;
+  padding: 10px;
+  margin: 3px;
+  cursor: pointer;
+}
+.playback-gui #bpm-slider {
+  width: 300px;
+}
