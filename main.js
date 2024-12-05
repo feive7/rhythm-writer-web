@@ -3,18 +3,42 @@ const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, BarNote, Dot, Tremol
 const VF = Vex.Flow;
 const div = document.getElementById("output");
 const renderer = new Renderer(div, Renderer.Backends.SVG);
+var debuglogs = true;
 renderer.resize(window.innerWidth, 200);
 const context = renderer.getContext();
 var currentPattern = inputBox.value;
 var simplifiedPattern = [];
+console.debugPrint = function(data) {
+  if(debuglogs) {
+    console.log(data);
+  }
+}
 function check(strInput, what) {
   switch(what) {
-    case("TimeSignature"): const TimeSignature = /^\d+\/\d+$/g; return strInput.match(TimeSignature);
-    case("ValidBeat"): const ValidBeat = /^\d+[^\/\n]*$/g; return strInput.match(ValidBeat);
-    case("IsBeat"): const IsBeat = /^\d+[^~\-\n\d]*$/g; return strInput.match(IsBeat);
-    case("IsTuplet"): const IsTuplet = /(\d+-)+\d+/g; return strInput.match(IsTuplet);
-    case("IsTie"): const IsTie = /(\d+[a-z]*~)+\d+/g; return strInput.match(IsTie);
-    case("IsRoll"): const IsRoll = /^\d+t+$/g; return strInput.match(IsRoll);
+    case("IsTimeSignature"):
+      const TimeSignature = /^\d+\/\d+$/g;
+      return TimeSignature.test(strInput);
+    case("ValidBeat"):
+      const ValidBeat = /^\d+[^\/\n]*$/g;
+      return ValidBeat.test(strInput);
+    case("IsBeat"):
+      const IsBeat = /^[-~]?\d+[^\-\d]*?[~-]?$/g;
+      return IsBeat.test(strInput);
+    case("IsTuplet"):
+      const IsEmittingTuplet = /(\d+[a-z]*-)+\d+[a-z]*/g;
+      return IsEmittingTuplet.test(strInput);
+    case("IsEmittingTie"):
+      const IsEmittingTie = /\d+[^\-\d]*~$/g;
+      return IsEmittingTie.test(strInput);
+    case("IsRecievingTie"):
+      const IsRecievingTie = /~\d+[^\-\d]*$/g;
+      return IsRecievingTie.test(strInput);
+  }
+}
+function get(strInput, what) {
+  console.log(strInput, what);
+  switch(what) {
+    case('beat'): const GetBeat = /(?<=^~*)\d+[^~\-\n\d]*(?=[~-]*$)/g; return strInput.match(GetBeat)[0];
   }
 }
 function get_note_from_beat(beat) {
@@ -29,7 +53,7 @@ function get_note_from_beat(beat) {
       case(">"): staveNote = staveNote.addModifier(new Articulation('a>')); break;
       case("<"): staveNote = staveNote.addModifier(new Articulation('a<')); break;
       case("."): staveNote = staveNote.addModifier(new Articulation('a.')); break;
-      default: console.log(modifier); break;
+      //default: console.log(modifier); break;
     }
   });
   return staveNote;
@@ -49,27 +73,33 @@ function addGlyph(stave, notes, glyph) {
     case("f"): notes.push(new TextDynamics({text: "f", duration: "4"})); break;
     case("ff"): notes.push(new TextDynamics({text: "ff", duration: "4"})); break;
     case("fff"): notes.push(new TextDynamics({text: "fff", duration: "4"})); break;
+    // for some reason, you put in an unrecognized symbol, print it out
+    default: console.debugPrint("unrecognized Character: " + glyph);
   }
 }
 function randompattern(measures = 1) {
   var pattern = "";
-  const options = ["1", "2", "4", "8 8", "8 16 16", "8d 16", "16 16 16 16", "16 16 8", "16 8 16"];
+  const options = [
+    {beats: "4", ticks: 4096},
+    {beats: "8", ticks: 2048},
+    {beats: "8-8-8", ticks: 4096},
+    {beats: "16", ticks: 1024},
+    {beats: "16", ticks: 1024},
+  ];
   for(var i = 0; i < measures; i++) {
     var ticks = 0;
     while(ticks < 16384) {
       const random = Math.floor(Math.random() * options.length);
       const pick = options[random];
-      const beats = pick.split(" ");
-      var noteTicks = 0;
-      beats.forEach((beat) => {
-        const pickedNote = get_note_from_beat(beat);
-        noteTicks += pickedNote.intrinsicTicks;
-      });
+      const noteBeats = pick.beats;
+      const noteTicks = pick.ticks;
       if(ticks + noteTicks <= 16384) {
         ticks += noteTicks;
-        pattern += pick + " ";
+        pattern += noteBeats + " ";
       }
     }
+    if(i != measures - 1)
+    pattern += "| "
   }
   return pattern;
 }
@@ -79,57 +109,44 @@ function draw(context, pattern = currentPattern) {
   const stave = new Stave(10, 40, window.innerWidth - 50);
   stave.addClef("percussion");
   const notes = [];
-  const beamnotes = [];
   const beats = pattern.split(" ");
-  var tick = 0;
-  var notenumber = 0;
   var capture = {start: 0, end: 0, type: ''};
-  beats.forEach((beat, number) => {
+  beats.forEach((beat, beatnumber) => {
     if(check(beat, "IsBeat")) {
       //If the beat is perfectly parseable by get_note_from_beat()
       const stavenote = get_note_from_beat(beat);
       notes.push(stavenote);
     }
-    else if(beat.includes('~')) {
-      const tiedBeats = beat.split("~");
-      capture.start = notes.length;
-      capture.end = notes.length + tiedBeats.length - 1;
-      console.log("Start: %i\nEnd: %i\nLength: %i\nType: %s", capture.start,capture.end,capture.end-capture.start,capture.type);
-      tiedBeats.forEach((tiedBeat) => {
-        if(check(tiedBeat, "IsBeat")) {
-          const stavenote = get_note_from_beat(tiedBeat);
-          notes.push(stavenote);
-        }
-        else {
-          const barline = new BarNote();
-          notes.push(barline);
-        }
-      });
-      for(var i = 0; i < capture.end - capture.start; i++) {
+    if(check(beat, "IsRecievingTie")) {
+      capture.end = notes.length - 1;
+      //console.log("Start: %i\nEnd: %i\nLength: %i\nType: %s", capture.start,capture.end,capture.end-capture.start,capture.type);
+      if(capture.start != capture.end) {
         const tie = new StaveTie({
-          first_note: notes[capture.start + i],
-          last_note: notes[capture.start + i + 1],
+          first_note: notes[capture.start],
+          last_note: notes[capture.end],
           first_indices: [0],
           last_indices: [0],
         });
         ties.push(tie);
       }
+      //console.log("tie from " + capture.start + " to " + capture.end);
     }
-    else if(beat.includes('-')) {
+    if(check(beat, "IsEmittingTie")) {
+      capture.start = notes.length - 1;
+    }
+    if(check(beat, "IsTuplet")) {
+      //console.log("tuplet from " + capture.start + " to " + capture.end);
       const tupletBeats = beat.split("-");
-      capture.start = notes.length;
-      capture.end = notes.length + tupletBeats.length;
-      console.log("Start: %i\nEnd: %i\nLength: %i\nType: %s", capture.start,capture.end,capture.end-capture.start,capture.type);
-      tupletBeats.forEach((tupletBeat) => {
-        const stavenote = get_note_from_beat(tupletBeat);
-        notes.push(stavenote);
+      tupletBeats.forEach((tupletBeat, i) => {
+        notes.push(get_note_from_beat(tupletBeat));
       });
-      const tupletNotes = notes.slice(capture.start,capture.end);
-      const tuplet = new Tuplet(tupletNotes);
+      const tuplet = new Tuplet(notes.slice(notes.length - tupletBeats.length, notes.length));
       tuplets.push(tuplet);
     }
-    else {
-      console.log(beat);
+    if(check(beat, "IsTimeSignature")) {
+      stave.addTimeSignature(beat);
+    }
+    if(/[\|pmf]/g.test(beat)) {
       addGlyph(stave, notes, beat);
     }
   });

@@ -1,6 +1,18 @@
 const play_button = document.querySelector("#play-button");
 const bpm_slider = document.querySelector("#bpm-slider");
 const bpm_display = document.querySelector("#bpm-display");
+function generate_strip(pattern) {
+  const beats = pattern.split(" ");
+  const tones = [];
+  var capture = {start: 0, end: 0, type: ''};
+  while(beats.length) {
+    const beat = beats.pop();
+    if(check(beat, "IsBeat")) {
+      tones.push(get_tone_from_beat(beat));
+    }
+  }
+  return tones;
+}
 function get_tone_from_beat(beat, mod = 1) {
   const length =  0.192;
   const duration = (get_note_from_beat(beat).intrinsicTicks / mod) * (0.015 / bpm_slider.value);
@@ -43,6 +55,7 @@ function play_rhythm() {
   const now = Tone.now();
   const beats = strip_beats(currentPattern);
   var ticks = 0;
+  console.log(beats);
   beats.forEach((beat, i) => {
     const tone = beats[i];
     for(var i = 0; i < tone.repeat; i++) {

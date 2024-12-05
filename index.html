@@ -7,13 +7,13 @@
     <link rel="stylesheet" href="main.css">
   </header>
   <body>
-    <textarea id="pattern" onkeyup="update(this.value)">4/4 4 4 8 8 4 | 16 16 16 16 8 8 4 4r</textarea><br>
+    <textarea id="pattern" onkeyup="update(this.value)">8 8 8-8-8 8 8</textarea><br>
     <select onchange="update(this.value)">
       <option value="4/4 4 4 8 8 4 | 16 16 16 16 8 8 4 4r">examples</option>
-      <option value="4/4 8 4d 8 4d | 2ttt~8 8 4r">21st Century Fox</option>
-      <option value="4~|~4 4-4">Tie/Tuplet Test</option>
+      <option value="4/4 8 4d 8 4d | 2ttt~ ~8 8 4r">21st Century Fox</option>
+      <option value="4~ | ~4 4-4">Tie/Tuplet Test</option>
     </select>
-    <button onclick="update(randompattern(4))">Random</button><button onclick="Train()">Train</button>
+    <button onclick="update(randompattern(2))">Random</button><button onclick="Train()">Train</button>
     <div id='output'></div>
 
     <div class="playback-gui">
