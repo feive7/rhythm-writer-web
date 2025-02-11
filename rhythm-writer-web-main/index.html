@@ -1,0 +1,27 @@
+<html>
+  <header>
+    <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+    <script src="https://unpkg.com/brain.js@2.0.0-beta.24/dist/browser.js"></script>
+    <script src="https://unpkg.com/tone"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css"/>
+    <link rel="stylesheet" href="main.css">
+  </header>
+  <body>
+    <textarea id="pattern" onkeyup="update(this.value)">8~ ~8 4 4</textarea><br>
+    <select onchange="update(this.value)">
+      <option value="4/4 4 4 8 8 4 | 16 16 16 16 8 8 4 4r">examples</option>
+      <option value="4/4 8 4d 8 4d | 2ttt~ ~8 8 4r">21st Century Fox</option>
+      <option value="4~ | ~4 4-4">Tie/Tuplet Test</option>
+    </select>
+    <button onclick="update(randompattern(2))">Random</button><button onclick="Train()">Train</button>
+    <div id='output'></div>
+
+    <div class="playback-gui">
+      <button id="play-button"><i class="iconoir-play-solid"></i></button><span class="bpm-box"><span id="bpm-display">120</span><input type="range" value="120" min="20" max="240" id="bpm-slider"></input></span>
+    </div>
+
+    <script src="main.js"></script>
+    <script src="playback.js"></script>
+    <script src="NeuralEngine.js"></script>
+  </body>
+</html>
